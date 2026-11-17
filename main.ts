@@ -36,7 +36,9 @@ const STOP_BPS = 75; // 0.75% below the entry close
 const MAXHOLD = 480; // 8h time stop
 const COOL = 30; // bars to wait after an exit
 const MAX_SLIP_BPS = 300; // reject a fill >3% from the latest close
-const MIN_NOTIONAL = 1_000_000n; // $1 in micro-USDC
+// Minimum spend for a buy, read from the harness fees when present
+// ($1 on this competition) instead of a hardcoded constant.
+const FALLBACK_MIN_NOTIONAL = 1_000_000n; // $1 in micro-USDC
 
 // Bar highs seen so far, excluding the bar being answered (the window
 // for the dip reference is the previous LOOK bars).
@@ -102,7 +104,8 @@ const bot = {
         const dipBps = exits === 0 && seq >= FALLBACK_SEQ ? FALLBACK_DIP_BPS : DIP_BPS;
         if (close * 10_000n <= hi * BigInt(10_000 - dipBps)) {
           const room = state.weightRoom(SYMBOL);
-          if (room >= MIN_NOTIONAL) {
+          const minNotional = BigInt(state.hello.fees?.min_notional_quote_units ?? FALLBACK_MIN_NOTIONAL);
+          if (room >= minNotional) {
             orders = [{ side: 'buy', symbol: SYMBOL, notional_quote_units: room, max_slippage_bps: MAX_SLIP_BPS }];
             pending = { close, seq };
           }
